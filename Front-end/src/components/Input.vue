@@ -96,7 +96,10 @@ const content_submit = () => {
 }
 
 .submit-btn {
-    display: block;
+    position: absolute;
+    top: 50px; /* 距离顶部 10px */
+    left: 50%;
+    transform: translateX(-50%);
     width: 100%;
     padding: 10px;
     margin-top: 10px;
@@ -105,7 +108,7 @@ const content_submit = () => {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    z-index: 100;
+    z-index: 1000;
     zIndex: 1000;
 }
 

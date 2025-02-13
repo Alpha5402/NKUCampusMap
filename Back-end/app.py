@@ -3,10 +3,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS  # 导入 CORS 扩展
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173"])  # 启用 CORS 支持，允许所有来源的跨域请求
+CORS(app, origins=["http://localhost:5174"])  # 启用 CORS 支持，允许所有来源的跨域请求
 
 # 接收前端发送的消息
-@app.route('/receive_message', methods=['POST'])
+@app.route('/submit', methods=['POST'])
 def receive_message():
     # 从请求中获取 JSON 数据
     data = request.get_json()
