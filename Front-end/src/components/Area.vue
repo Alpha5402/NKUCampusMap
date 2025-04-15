@@ -5,7 +5,7 @@
 
 <script setup>
 import { onMounted, defineProps, ref, watch } from 'vue';
-import { EventBus } from './bus.js';
+import { EventBus } from '../scripts/bus.js';
 
 const props = defineProps({
     map: {
@@ -59,37 +59,30 @@ function create_interactive_area(coordinates) {
         }
     });
 
-    //text.setMap(map);
-
     props.map.add(polygon);
     props.map.add(text);
 
-    // 为多边形绑定点击事件
     polygon.on('click', (event) => {
-        const position = event.pixel; // 获取点击位置
-
         let handler = {
-            status: true,
+            area_info_display_status: true,
             target: props.area_target,
-            position: position
         }
 
-        EventBus.emit('toggle_sub_menu', handler);
+        EventBus.emit('toggle_menu', handler);
     });
 
-    console.log("Interactive area has been drawn successfully.");
+    // console.log("Interactive area has been drawn successfully.");
 }
 
 onMounted(() => {
     if (props.map) {
         create_interactive_area(props.area_target.coordinates);
-        console.log("[onMounted] Polygon has been created")
+        // console.log("[onMounted] Polygon has been created")
     }
 });
 </script>
 
 <script>
-// 计算多边形的质心
 function get_centroid(path) {
     var x = 0.0, y = 0.0;
     var len = path.length;

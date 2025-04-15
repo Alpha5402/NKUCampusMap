@@ -1,16 +1,17 @@
 <template>
-  <div>
-  </div>
+    <div>
+    </div>
 </template>
 
 <script setup>
 import {onBeforeUnmount, onMounted, ref, watch} from 'vue';
+import {EventBus} from "@/scripts/bus.js";
 
 const props = defineProps({
-  map: {
-    type: Object,
-    required: true
-  }
+    map: {
+        type: Object,
+        required: true
+    }
 });
 
 const geolocation = ref(null);
@@ -39,24 +40,30 @@ const geolocation_initialize = () => {
 
 // 定位成功后的回调函数
 const onLocationComplete = (data) => {
-  const { position } = data;
+    const {position} = data;
 
-  if (marker.value) {
-    props.map.remove(marker.value);
-  }
+    if (marker.value) {
+        props.map.remove(marker.value);
+    }
 
-  marker.value = new AMap.Marker({
-    position: position,
-    map: props.map
-  });
+    marker.value = new AMap.Marker({
+        position: position,
+        map: props.map
+    });
 
-  props.map.setCenter(position);
+    props.map.setCenter(position);
 
-  watch_position();
+    let handler = {
+        geolocation: position
+    }
+
+    EventBus.emit('update_geolocation', handler);
+
+    watch_position();
 };
 
 const onLocationError = (error) => {
-  console.error('Location error:', error);
+    console.error('Location error:', error);
 };
 
 // 监听位置变化
@@ -67,8 +74,14 @@ const watch_position = () => {
                 const {position} = result;
 
                 if (marker.value) {
-                    marker.value.setPosition(position);
+                   marker.value.setPosition(position);
                 }
+
+                let handler = {
+                    geolocation: position
+                }
+
+                EventBus.emit('update_geolocation', handler);
 
                 props.map.setCenter(position);
             } else {
@@ -79,22 +92,22 @@ const watch_position = () => {
 };
 
 onMounted(() => {
-  if (props.map) {
-    geolocation_initialize();
-  }
+    if (props.map) {
+        geolocation_initialize();
+    }
 });
 
 // 组件销毁前停止监听位置变化
 onBeforeUnmount(() => {
-  if (geolocation.value) {
-    geolocation.value.clearWatch();
-  }
+    if (geolocation.value) {
+        geolocation.value.clearWatch();
+    }
 });
 
 watch(() => props.map, (newMap) => {
-  if (newMap) {
-    geolocation_initialize();
-  }
+    if (newMap) {
+        geolocation_initialize();
+    }
 });
 </script>
 
