@@ -5,6 +5,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS  # 导入 CORS 扩展
 import hashlib
 import time
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 CORS(app, origins=["https://www.nkucampusmap.xin/"])  # 启用 CORS 支持，允许所有来源的跨域请求
@@ -13,24 +14,6 @@ CORS(app, origins=["https://www.nkucampusmap.xin/"])  # 启用 CORS 支持，允
 @app.route("/api")
 def home():
     return "Hello World!"
-
-# 接收前端发送的消息
-@app.route('/api/submit', methods=['POST'])
-def receive_message():
-    # 从请求中获取 JSON 数据
-    data = request.get_json()
-
-    # 打印接收到的消息
-    print("Received message:", data)
-
-    # 返回一个响应给前端
-    response = {
-        "status": "success",
-        "message": "Message received successfully",
-        "received_data": data
-    }
-
-    return jsonify(response)
 
 @app.route('/api/get_security_key')
 def get_security_key():
@@ -54,14 +37,7 @@ def get_tenant_access_token(app_id, app_secret):
     else:
         raise Exception(f"Failed to get tenant_access_token: {data.get('msg')}")
 
-# 替换为你的 App ID 和 App Secret
 
-from flask import Flask, request, jsonify
-import requests
-import time
-import hashlib
-import os
-from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
@@ -141,3 +117,56 @@ def get_api_key():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+# TODO
+"""
+- /api/submit 
+	- Receive
+		- content (String)   User Input
+	- Response
+		- status (String)   status of response
+		- output (String)   output from ai
+		- result_array (Array)   all of related result (provided by ai and only can be someone of  the area's internal_ID of `Area.json`) (Sorted by Correlation)
+"""
+@app.route('/api/submit', methods=['POST'])
+def handle_sumbit():
+    # 从请求中获取 JSON 数据
+    data = request.get_json()
+
+    # 打印接收到的消息
+    print("Received message:", data)
+
+    # 返回一个响应给前端
+    response = {
+        "status": "success",
+        "message": "Message received successfully",
+        "received_data": data
+    }
+
+    return jsonify(response)
+
+# TODO
+"""
+- /api/info 
+	- Receive
+		- full_name (String)   the full name of the target area
+	- Response
+		- status (String)   status of response
+		- output (String)   output from ai
+"""
+@app.route('/api/info', methods=['POST'])
+def handle_get_info():
+    # 从请求中获取 JSON 数据
+    data = request.get_json()
+
+    # 打印接收到的消息
+    print("Received message:", data)
+
+    # 返回一个响应给前端
+    response = {
+        "status": "success",
+        "message": "Message received successfully",
+        "received_data": data
+    }
+
+    return jsonify(response)
