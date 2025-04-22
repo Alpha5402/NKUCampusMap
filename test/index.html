@@ -65,33 +65,70 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .card-container {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none; /* 默认隐藏 */
+        }
+        .card-container h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .card-container p {
+            color: #555;
+            line-height: 1.6;
+        }
+        .card-container ul {
+            list-style: disc;
+            margin-left: 20px;
+            padding-left: 0;
+        }
+        .card-container li {
+            color: #666;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>DeepSeek API 测试</h1>
-        
+
         <div class="input-area">
             <h2>输入内容</h2>
             <textarea id="userInput" placeholder="请输入您的问题...">南开大学图书馆在哪里？</textarea>
             <button id="submitBtn">发送请求</button>
         </div>
-        
+
         <div class="loading" id="loading">
             <div class="spinner"></div> 正在处理请求...
         </div>
-        
+
+        <!-- 新增卡片容器 -->
+        <h2>结构化信息卡片</h2>
+        <div id="cardContainer" class="card-container">
+            <h3 id="cardName"></h3>
+            <p id="cardDescription"></p>
+            <h4>特点:</h4>
+            <ul id="cardFeatures"></ul>
+        </div>
+
         <div>
-            <h2>API 响应</h2>
+            <h2>原始 API 响应</h2>
             <div class="response-area" id="responseOutput">响应将显示在这里...</div>
         </div>
-        
+
         <div>
-            <h2>相关区域</h2>
+            <h2>相关区域 (Internal IDs)</h2>
             <div class="response-area" id="relatedAreas">相关区域将显示在这里...</div>
         </div>
     </div>
-    
+
     <script src="static/app.js"></script>
 </body>
 </html>
