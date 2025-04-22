@@ -119,31 +119,104 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 # TODO
-"""
-- /api/submit 
-	- Receive
-		- content (String)   User Input
-	- Response
-		- status (String)   status of response
-		- output (String)   output from ai
-		- result_array (Array)   all of related result (provided by ai and only can be someone of  the area's internal_ID of `Area.json`) (Sorted by Correlation)
-"""
+
 @app.route('/api/submit', methods=['POST'])
 def handle_sumbit():
     # 从请求中获取 JSON 数据
     data = request.get_json()
 
-    # 打印接收到的消息
-    print("Received message:", data)
+    # 获取用户输入的内容
+    user_input = data.get('content', '')
+    
+    if not user_input:
+        return jsonify({
+            "status": "error",
+            "output": "未提供输入内容",
+            "result_array": []
+        })
 
-    # 返回一个响应给前端
+    # 调用 AI 模型处理用户输入
+    ai_output = call_deepseek_api(user_input)
+    
+    # 根据 AI 输出，找到相关区域的内部 ID
+    # 从 Area.json 中读取区域数据
+    areas_data = []
+    try:
+        # 假设前端的 Area.json 文件路径
+        import json
+        with open('../Front-end/src/assets/Area.json', 'r', encoding='utf-8') as f:
+            areas_data = json.load(f).get('areas', [])
+    except Exception as e:
+        print(f"读取区域数据失败: {str(e)}")
+    
+    # 根据 AI 输出找到相关区域
+    result_array = []
+    for area in areas_data:
+        # 这里需要根据实际情况实现相关性判断逻辑
+        # 简单示例：如果区域名称或全名出现在 AI 输出中，则认为相关
+        if 'internal_id' in area and (
+            area.get('name', '') in ai_output or 
+            area.get('fullName', '') in ai_output
+        ):
+            result_array.append(area['internal_id'])
+    
+    # 返回符合 API 文档要求的响应
     response = {
         "status": "success",
-        "message": "Message received successfully",
-        "received_data": data
+        "output": ai_output,
+        "result_array": result_array
     }
 
     return jsonify(response)
+
+def call_deepseek_api(prompt, system_prompt=""):
+    """
+    调用 DeepSeek API 处理用户输入
+    
+    Args:
+        prompt (str): 用户输入的内容
+        system_prompt (str, optional): 系统提示词
+        
+    Returns:
+        str: AI 模型的输出
+    """
+    try:
+        # 这里实现调用 DeepSeek API 的逻辑
+        # 示例代码，需要根据实际 API 进行修改
+        api_key = os.environ.get('DEEPSEEK_API_KEY')
+        if not api_key:
+            return "未配置 DeepSeek API 密钥"
+            
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": system_prompt if system_prompt else "你是一个校园导航助手，请根据用户的问题提供南开大学津南校区的相关信息。"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 800
+        }
+        
+        response = requests.post(
+            "https://api.deepseek.com/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code == 200:
+            return response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            print(f"DeepSeek API 调用失败: {response.status_code}, {response.text}")
+            return f"AI 服务暂时不可用，请稍后再试"
+            
+    except Exception as e:
+        print(f"调用 DeepSeek API 出错: {str(e)}")
+        return "处理请求时发生错误，请稍后再试"
 
 # TODO
 """
