@@ -11,9 +11,9 @@ app = Flask(__name__)
 CORS(app, origins=["https://www.nkucampusmap.xin/"])  # 启用 CORS 支持，允许所有来源的跨域请求
 # CORS(app, resources={r"/*": {"origins": "*"}})
 
-@app.route("/api")
-def home():
-    return "Hello World!"
+# @app.route("/api")
+# def home():
+#     return "Hello World!"
 
 @app.route('/api/get_security_key')
 def get_security_key():
@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
 # TODO
 
-@app.route('/api/submit', methods=['POST'])
+@app.route('/submit', methods=['POST'])
 def handle_sumbit():
     # 从请求中获取 JSON 数据
     data = request.get_json()
@@ -183,7 +183,7 @@ def call_deepseek_api(prompt, system_prompt=""):
     try:
         # 这里实现调用 DeepSeek API 的逻辑
         # 示例代码，需要根据实际 API 进行修改
-        api_key = os.environ.get('DEEPSEEK_API_KEY')
+        api_key = 'sk-427f6bb3cbca46d38cdd4cd5878ba955'
         if not api_key:
             return "未配置 DeepSeek API 密钥"
             
