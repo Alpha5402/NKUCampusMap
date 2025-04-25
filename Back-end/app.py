@@ -363,3 +363,130 @@ def handle_route():
                 }
             ]
         })
+
+#——-------------------新增————————————————
+# 在Pydantic模型定义部分添加（放在LocationInfo类后面）
+class LocationDetailInfo(BaseModel):
+    name: str = Field(..., description="地点完整名称")
+    description: str = Field(..., description="详细描述")
+    location: str = Field(..., description="具体位置")
+    features: List[str] = Field(default_factory=list, description="特点列表")
+    opening_hours: Optional[str] = Field(None, description="开放时间")
+    services: Optional[List[str]] = Field(default_factory=list, description="提供服务")
+    tips: Optional[List[str]] = Field(default_factory=list, description="注意事项")
+    nearby: Optional[List[str]] = Field(default_factory=list, description="附近地点")
+
+
+# 在全局变量部分添加（可以放在load_dotenv()后面）
+location_detail_db = {
+    "食堂": {
+        "name": "南开大学津南校区学生食堂",
+        "location": "位于校区中心区域，靠近学生宿舍区和教学区",
+        "features": ["提供多种菜系", "价格实惠", "环境整洁"],
+        "opening_hours": "早餐: 6:30-9:00, 午餐: 11:00-13:30, 晚餐: 17:00-19:30",
+        "services": ["堂食", "打包", "校园卡支付"],
+        "tips": ["高峰时段可能拥挤", "建议错峰就餐"],
+        "nearby": ["宿舍楼", "教学楼", "便利店"]
+    },
+    "图书馆": {
+        "name": "南开大学津南校区图书馆",
+        "location": "校区中心位置，靠近行政楼和主教学楼",
+        "features": ["藏书丰富", "现代化设施", "安静学习环境"],
+        "opening_hours": "周一至周日 8:00-23:00",
+        "services": ["图书借阅", "自习室", "电子资源", "研讨室"],
+        "tips": ["需要校园卡进入", "保持安静"],
+        "nearby": ["世纪华联超市", "大通学生活动中心", "教学楼"]
+    },
+    "体育馆": {
+        "name": "津南校区体育馆",
+        "location": "校区西北部，靠近西门",
+        "features": ["设施齐全", "专业场地", "多功能区域"],
+        "opening_hours": "8:00~22:00",
+        "services": ["篮球场", "游泳池", "健身房", "羽毛球馆", "乒乓球场", "排球馆", "体育舞蹈教室"],
+        "tips": ["部分设施需要预约", "需携带运动装备", "进入场馆需刷脸"],
+        "nearby": ["主体育场", "文科操场", "学生活动中心"]
+    }
+}
+
+
+# 新增info路由（放在submit路由后面）
+@app.route('/info', methods=['POST'])
+def handle_info():
+    # 统一响应结构
+    response_data = {
+        "status": "error",
+        "output": "",
+        "detail_info": None,
+        "related_locations": [],
+        "message": ""
+    }
+
+    try:
+        data = request.get_json()
+        user_input = data.get('content', '')
+
+        if not user_input:
+            response_data.update({
+                "output": "未提供查询内容",
+                "message": "请输入要查询的地点详细信息"
+            })
+            return jsonify(response_data)
+
+        # 调用AI解析（使用专用提示词）
+        ai_raw_output, ai_structured_output = call_deepseek_api(
+            user_input,
+            system_prompt="请精确提取要查询详情的地点名称，只需返回{'name':'标准名称'}格式"
+        )
+        response_data["output"] = ai_raw_output
+
+        # 错误处理
+        if not ai_structured_output or ai_structured_output.name in ["无法处理的请求", "解析失败"]:
+            response_data.update({
+                "message": "无法识别要查询的地点",
+                "detail_info": {
+                    "name": "未知地点",
+                    "suggestion": "请尝试使用更标准的地点名称如'图书馆'或'第一食堂'"
+                }
+            })
+            return jsonify(response_data)
+
+        # 获取详细信息
+        location_name = ai_structured_output.name
+        detail_info = location_detail_db.get(location_name, {
+            "name": location_name,
+            "description": "暂无详细信息",
+            "location": "位置信息待补充",
+            "features": ["信息更新中"],
+            "tips": ["请咨询校园工作人员获取最新信息"]
+        })
+
+        # 关联地点匹配
+        areas_data = load_areas_data()
+        related_locations = [
+            area['internal_id'] for area in areas_data
+            if 'internal_id' in area and
+               area.get('name', '').lower() in location_name.lower()
+        ]
+
+        # 数据验证
+        validated_info = LocationDetailInfo(**detail_info)
+        response_data.update({
+            "status": "success",
+            "detail_info": validated_info.dict(),
+            "related_locations": related_locations,
+            "message": "详细信息获取成功"
+        })
+
+    except ValidationError as e:
+        response_data.update({
+            "message": "数据验证失败",
+            "error": str(e),
+            "detail_info": detail_info  # 保持返回原始数据
+        })
+    except Exception as e:
+        response_data.update({
+            "message": f"服务器错误: {str(e)}",
+            "error": str(e)
+        })
+
+    return jsonify(response_data)
