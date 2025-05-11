@@ -35,6 +35,7 @@
             :result="response_result"
             :main_description="response_main_description"
             :areas_list="areas"
+            :response_content="response_content"
         />
         />
 
@@ -118,6 +119,7 @@ const steps_styles = ref({
 // main_description -- main description of response
 const response_result = ref([]);
 const response_main_description = ref("");
+const response_content = ref(null);
 const response_display_status = ref(false);
 
 const load_AMap_script = () => {
@@ -417,6 +419,7 @@ onMounted(async () => {
         EventBus.on('display_response', (handler) => {
             map_styles.value = handler.map_styles;
             response_display_status.value = handler.response_display_status;
+            response_content.value = handler.response_content;
         })
     }  catch (error) {
         console.error("Error in onMounted:", error);

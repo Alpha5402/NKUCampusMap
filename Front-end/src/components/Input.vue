@@ -20,7 +20,7 @@
 
 <script setup>
 import { EventBus } from '@/scripts/bus';
-import {defineProps, ref, watch} from 'vue';
+import { defineProps, ref, watch } from 'vue';
 
 const props = defineProps({
     content: {
@@ -75,7 +75,8 @@ const content_submit = () => {
         .then(data => {
             console.log(data);
             const handler = {
-                response_display_status: true
+                response_display_status: true,
+                response_content: data.output
             }
             EventBus.emit('display_response', handler);
         })

@@ -1,5 +1,8 @@
 <template>
     <div class="response-container">
+        <div class = "server-response">
+            {{ props.response_content }}
+        </div>
         <div class = "list-container" v-show = "response_invaild">
             <div 
                 class = "list-item"
@@ -15,8 +18,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import { EventBus } from '@/scripts/bus.js'
 
 const response_invaild = ref(true);
+const response = ref(null)
 
 const props = defineProps({
     result: {
@@ -30,6 +35,9 @@ const props = defineProps({
     areas_list: {
         type: Array,
         required: true
+    },
+    response_content: {
+        type: String
     }
 })
 
@@ -53,6 +61,7 @@ const props = defineProps({
     height: 100%;
     background: rgba(255, 255, 255);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 1000;

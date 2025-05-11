@@ -114,6 +114,9 @@ def get_api_key():
     api_key = os.environ.get('AMAP_API_KEY')
     return api_key
 
+if __name__ == '__main__':
+    app.run(debug=True)
+
 # 读取区域数据
 def load_areas_data():
     try:
@@ -124,7 +127,7 @@ def load_areas_data():
         print(f"读取区域数据失败: {str(e)}")
         return []
 
-@app.route('/submit', methods=['POST'])
+@app.route('/api/submit', methods=['POST'])
 def handle_submit():
     # 从请求中获取 JSON 数据
     data = request.get_json()

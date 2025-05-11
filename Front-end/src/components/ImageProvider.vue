@@ -1,11 +1,13 @@
 <template>
     <div class = "modal-overlay" @click = "handle_overlay_click">
         <div class = "image_provider" ref = "modal">
-            <div class = "image_title"> {{ props.image_title }} </div>
+            <div class = "image_title"> {{ image_title }} </div>
             <div class = "image_container">
-                <img :src = "current_image_src" :alt="image_description" width = "300px" height = "300px">
-                <div v-for="(name, index) in image_src_list" :key="index" @click="handle_image_toggle(index)">
-                    {{ name }}
+                <img :src = "current_image_src" :alt="image_description" width = "300px">
+                <div class = "button_container">
+                    <div class = "button-item" v-for="(name, index) in image_src_list" :key="index" @click="handle_image_toggle(index)">
+                        {{ name }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -14,11 +16,12 @@
 
 <script setup>
 import { EventBus } from '@/scripts/bus';
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, nextTick } from 'vue'
 
 const current_image_src = ref(null);
 const image_src_list = ref([]);
 const image_description = ref("");
+const image_title = ref("");
 const modal = ref(null);
 
 const props = defineProps({
@@ -26,17 +29,11 @@ const props = defineProps({
         required: false,
         type: Object
     },
-    image_title: {
-        required: false,
-        type: String,
-        default: "未命名"
-    },
     image_index: {
         required: false,
         type: Array
     },
     image_src: {
-        
         required: true,
         type: Array
     }
@@ -69,8 +66,11 @@ onMounted (() => {
     EventBus.on('render_image', (data) => {
         if (props.target) {
             image_src_list.value = props.target.floor_name;
-            console.log(image_src_list);
-            current_image_src.value = props.target.internal_id + "\\"+ image_src_list[0] + ".png";
+            let normal_index = props.target.default_map_display;
+            if (!normal_index)
+                normal_index = 0;
+            image_title.value = props.target.fullName + " " + image_src_list.value[normal_index];
+            current_image_src.value = "internal_map\\" + props.target.internal_id + "\\"+ image_src_list.value[normal_index] + ".png";
         } else {
             console.log("no target");
         }
@@ -78,8 +78,12 @@ onMounted (() => {
 })
 
 const handle_image_toggle = (index) => {
-    current_image_src.value = props.target.internal_id + "\\"+ image_src_list[index] + ".png";
-    image_description.value = "我是" + props.target.fullName + " " + image_src_list[index] + " 的地图";
+    console.log("translate floor to " + index)
+    current_image_src.value = undefined;
+
+    current_image_src.value = "internal_map\\" + props.target.internal_id + "\\"+ image_src_list.value[index] + ".png";
+    image_title.value = props.target.fullName + " " + image_src_list.value[index];
+    image_description.value = "我是" + props.target.fullName + " " + image_src_list.value[index] + " 的地图";
 }
 
 
@@ -132,5 +136,15 @@ const handle_image_toggle = (index) => {
     justify-content: center;
     align-items: center;
     padding: 8px;
+}
+
+.button_container {
+    display: flex;
+    flex-directrion: row;
+    justify-content: center;
+}
+
+.button-item {
+    padding: 4px;
 }
 </style>

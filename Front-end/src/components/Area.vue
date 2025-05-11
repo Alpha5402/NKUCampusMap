@@ -71,7 +71,14 @@ function create_interactive_area(coordinates) {
         EventBus.emit('toggle_menu', handler);
     });
 
-    // console.log("Interactive area has been drawn successfully.");
+    text.on('click', (event) => {
+        let handler = {
+            area_info_display_status: true,
+            target: props.area_target,
+        }
+
+        EventBus.emit('toggle_menu', handler);
+    });
 }
 
 onMounted(() => {
