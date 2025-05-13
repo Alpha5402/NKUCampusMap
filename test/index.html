@@ -3,132 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepSeek API 测试</title>
+    <title>南开大学校园地图 - 测试界面</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            margin: 0;
             padding: 20px;
+            background-color: #f5f5f5;
         }
         .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .input-area {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        h1 {
+            color: #00529b;
+            text-align: center;
+            margin-bottom: 30px;
         }
-        textarea {
-            height: 100px;
+        .input-section {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #userInput {
+            flex: 1;
             padding: 10px;
-            font-family: inherit;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
         }
         button {
-            padding: 10px 15px;
-            background-color: #1791fc;
+            background-color: #00529b;
             color: white;
             border: none;
+            padding: 10px 20px;
+            margin-left: 10px;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: bold;
+            font-size: 16px;
         }
         button:hover {
-            background-color: #0e7ad9;
+            background-color: #003d73;
         }
-        .response-area {
-            border: 1px solid #ddd;
-            padding: 15px;
-            min-height: 200px;
-            border-radius: 4px;
-            background-color: #f9f9f9;
-            white-space: pre-wrap;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 10px 0;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top: 4px solid #1791fc;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .card-container {
+        .result-section {
             margin-top: 20px;
-            border: 1px solid #ccc;
+        }
+        .card {
+            background-color: white;
+            border: 1px solid #ddd;
             border-radius: 8px;
             padding: 15px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: none; /* 默认隐藏 */
+            margin-bottom: 15px;
         }
-        .card-container h3 {
+        .card h3 {
             margin-top: 0;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
+            color: #00529b;
         }
-        .card-container p {
-            color: #555;
-            line-height: 1.6;
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
         }
-        .card-container ul {
-            list-style: disc;
-            margin-left: 20px;
-            padding-left: 0;
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
         }
-        .card-container li {
-            color: #666;
+        .loading:after {
+            content: " .";
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: " ."; }
+            40% { content: " .."; }
+            60% { content: " ..."; }
+            80%, 100% { content: " ...."; }
+        }
+        .feature-tag {
+            display: inline-block;
+            background-color: #e6f3ff;
+            color: #00529b;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-right: 5px;
             margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .toggle-section {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        .toggle-btn {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .toggle-btn.active {
+            background-color: #00529b;
+            color: white;
+            border-color: #00529b;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>DeepSeek API 测试</h1>
-
-        <div class="input-area">
-            <h2>输入内容</h2>
-            <textarea id="userInput" placeholder="请输入您的问题...">南开大学图书馆在哪里？</textarea>
-            <button id="submitBtn">发送请求</button>
+        <h1>南开大学校园地图 - 测试界面</h1>
+        
+        <div class="toggle-section">
+            <button id="mockModeBtn" class="toggle-btn active">模拟模式</button>
+            <button id="realModeBtn" class="toggle-btn">实际后端</button>
         </div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div> 正在处理请求...
+        
+        <div class="input-section">
+            <input type="text" id="userInput" placeholder="请输入您想了解的校园地点，例如：图书馆在哪里？" />
+            <button id="submitBtn">查询</button>
         </div>
-
-        <!-- 新增卡片容器 -->
-        <h2>结构化信息卡片</h2>
-        <div id="cardContainer" class="card-container">
-            <h3 id="cardName"></h3>
-            <p id="cardDescription"></p>
-            <h4>特点:</h4>
-            <ul id="cardFeatures"></ul>
-        </div>
-
-        <div>
-            <h2>原始 API 响应</h2>
-            <div class="response-area" id="responseOutput">响应将显示在这里...</div>
-        </div>
-
-        <div>
-            <h2>相关区域 (Internal IDs)</h2>
-            <div class="response-area" id="relatedAreas">相关区域将显示在这里...</div>
+        
+        <div id="loading" class="loading">正在查询中</div>
+        
+        <div class="result-section">
+            <div id="aiResponse" class="card" style="display: none;">
+                <h3>AI 回复</h3>
+                <p id="aiResponseText"></p>
+            </div>
+            
+            <div id="matchedLocations" class="card" style="display: none;">
+                <h3>匹配到的地点</h3>
+                <div id="locationsList"></div>
+            </div>
+            
+            <div id="structuredData" class="card" style="display: none;">
+                <h3>结构化数据</h3>
+                <div id="locationName"></div>
+                <div id="locationDesc"></div>
+                <div id="locationFeatures"></div>
+                <pre id="rawJson"></pre>
+            </div>
+            
+            <div id="errorMessage" class="card" style="display: none;">
+                <h3>错误信息</h3>
+                <p id="errorText"></p>
+            </div>
         </div>
     </div>
 
-    <script src="static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userInput = document.getElementById('userInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const aiResponse = document.getElementById('aiResponse');
+            const aiResponseText = document.getElementById('aiResponseText');
+            const matchedLocations = document.getElementById('matchedLocations');
+            const locationsList = document.getElementById('locationsList');
+            const structuredData = document.getElementById('structuredData');
+            const locationName = document.getElementById('locationName');
+            const locationDesc = document.getElementById('locationDesc');
+            const locationFeatures = document.getElementById('locationFeatures');
+            const rawJson = document.getElementById('rawJson');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const mockModeBtn = document.getElementById('mockModeBtn');
+            const realModeBtn = document.getElementById('realModeBtn');
+            
+            let useRealBackend = false;
+            
+            // 切换模式
+            mockModeBtn.addEventListener('click', function() {
+                useRealBackend = false;
+                mockModeBtn.classList.add('active');
+                realModeBtn.classList.remove('active');
+            });
+            
+            realModeBtn.addEventListener('click', function() {
+                useRealBackend = true;
+                realModeBtn.classList.add('active');
+                mockModeBtn.classList.remove('active');
+            });
+            
+            // 提交查询
+            submitBtn.addEventListener('click', submitQuery);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitQuery();
+                }
+            });
+            
+            function submitQuery() {
+                const query = userInput.value.trim();
+                if (!query) return;
+                
+                // 重置显示
+                resetDisplay();
+                loading.style.display = 'block';
+                
+                // 确定 API 端点
+                const endpoint = useRealBackend ? '/api/real_submit' : '/api/submit';
+                
+                // 发送请求
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content: query })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    
+                    if (data.status === 'error') {
+                        showError(data.output || data.message || '查询失败');
+                        return;
+                    }
+                    
+                    // 显示 AI 回复
+                    aiResponse.style.display = 'block';
+                    aiResponseText.textContent = data.output;
+                    
+                    // 显示匹配到的地点
+                    if (data.result_array && data.result_array.length > 0) {
+                        matchedLocations.style.display = 'block';
+                        locationsList.innerHTML = data.result_array.map(id => 
+                            `<div class="feature-tag">${id}</div>`
+                        ).join('');
+                    }
+                    
+                    // 显示结构化数据
+                    if (data.structured_output) {
+                        structuredData.style.display = 'block';
+                        locationName.innerHTML = `<h4>${data.structured_output.name}</h4>`;
+                        locationDesc.innerHTML = `<p>${data.structured_output.description}</p>`;
+                        
+                        if (data.structured_output.features && data.structured_output.features.length > 0) {
+                            locationFeatures.innerHTML = data.structured_output.features.map(feature => 
+                                `<span class="feature-tag">${feature}</span>`
+                            ).join('');
+                        }
+                        
+                        rawJson.textContent = JSON.stringify(data.structured_output, null, 2);
+                    }
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    showError(`请求失败: ${error.message}`);
+                });
+            }
+            
+            function resetDisplay() {
+                aiResponse.style.display = 'none';
+                matchedLocations.style.display = 'none';
+                structuredData.style.display = 'none';
+                errorMessage.style.display = 'none';
+            }
+            
+            function showError(message) {
+                errorMessage.style.display = 'block';
+                errorText.textContent = message;
+            }
+        });
+    </script>
 </body>
 </html>
