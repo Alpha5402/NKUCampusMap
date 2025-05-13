@@ -129,12 +129,11 @@ def load_areas_data():
 
 @app.route('/api/submit', methods=['POST'])
 def handle_submit():
-    # 从请求中获取 JSON 数据
+    # 获取用户输入
     data = request.get_json()
-
-    # 获取用户输入的内容
     user_input = data.get('content', '')
     
+    # 输入验证
     if not user_input:
         return jsonify({
             "status": "error",
@@ -144,33 +143,33 @@ def handle_submit():
         })
 
     # 调用AI模型处理用户输入
-    ai_raw_output, ai_structured_output = call_deepseek_api(user_input)
+    ai_raw_output, ai_structured_output = call_nkugenious_api(user_input)
 
-    # 加载区域数据
-    areas_data = load_areas_data()
+    # 匹配地点
     result_array = []
     
-    # 改进区域匹配逻辑
-    if ai_structured_output and ai_structured_output.name != "无法处理的请求" and ai_structured_output.name != "解析失败" and ai_structured_output.name != "API调用失败" and ai_structured_output.name != "处理异常":
-        location_name = ai_structured_output.name.lower()
-        location_desc = ai_structured_output.description.lower()
+    # 只有当结构化输出有效且不是错误状态时才进行匹配
+    if (ai_structured_output and 
+        ai_structured_output.name not in ["无法处理的请求", "解析失败", "API调用失败", "处理异常"]):
         
-        # 打印调试信息
+        areas_data = load_areas_data()
+        location_name = ai_structured_output.name.lower()
+        
         print(f"正在匹配地点: {location_name}")
         print(f"可用区域数量: {len(areas_data)}")
         
+        # 遍历所有区域进行匹配
         for area in areas_data:
             area_name = area.get('name', '').lower()
             area_fullname = area.get('fullName', '').lower()
             
-            # 更全面的匹配逻辑
+            # 简化匹配条件，只匹配名称
             if (area_name in location_name or 
                 area_fullname in location_name or 
                 location_name in area_name or 
-                location_name in area_fullname or
-                area_name in location_desc or
-                area_fullname in location_desc):
+                location_name in area_fullname):
                 
+                # 添加匹配结果
                 if 'internal_id' in area:
                     result_array.append(area['internal_id'])
                     print(f"匹配到区域: {area.get('name')} (ID: {area['internal_id']})")
@@ -178,22 +177,14 @@ def handle_submit():
                     result_array.append(area.get('name', '未命名区域'))
                     print(f"匹配到区域: {area.get('name')} (无ID)")
     
-    # 如果结构化匹配没有结果，尝试使用原始文本匹配
-    if not result_array:
-        print("结构化匹配未找到结果，尝试原始文本匹配")
-        raw_text = ai_raw_output.lower()
-        for area in areas_data:
-            area_name = area.get('name', '').lower()
-            area_fullname = area.get('fullName', '').lower()
-            
-            if area_name in raw_text or area_fullname in raw_text:
-                if 'internal_id' in area:
-                    result_array.append(area['internal_id'])
-                    print(f"原始文本匹配到区域: {area.get('name')} (ID: {area['internal_id']})")
-                else:
-                    result_array.append(area.get('name', '未命名区域'))
-                    print(f"原始文本匹配到区域: {area.get('name')} (无ID)")
-
+    # 如果没有匹配到地点，修改输出信息
+    if not result_array and ai_structured_output and ai_structured_output.name not in ["无法处理的请求", "API调用失败", "处理异常"]:
+        ai_structured_output = LocationInfo(
+            name="未找到匹配地点",
+            description=f"无法在校园地图中找到与{ai_structured_output.name}匹配的地点",
+            features=["请尝试使用更准确的地点名称", "可以询问常见地点如图书馆、食堂等"]
+        )
+    
     # 返回响应
     response_data = {
         "status": "success",
@@ -204,26 +195,27 @@ def handle_submit():
 
     return jsonify(response_data)
 
-def call_deepseek_api(prompt, system_prompt=""):
+def call_nkugenious_api(prompt, system_prompt=""):
     """
-    调用 DeepSeek API 处理用户输入，并尝试解析为结构化数据。
-
+    调用 NKUGenious 智能体 API 处理用户输入，简化版本
+    
     Args:
         prompt (str): 用户输入的内容
         system_prompt (str, optional): 系统提示词
-
+        
     Returns:
         tuple: (原始文本输出, 解析后的 Pydantic 对象或 None)
     """
-    raw_output = ""
-    parsed_data = None
     try:
-        api_key = 'sk-427f6bb3cbca46d38cdd4cd5878ba955' # 替换为你的 DeepSeek API Key
-        if not api_key:
-            return "未配置 DeepSeek API 密钥", None
-
-        # --- 构建请求 DeepSeek 的 Payload ---
-        # 改进提示词，使其更加明确和具体
+        # 设置 API 端点和凭据
+        api_endpoint = "https://coze.nankai.edu.cn/api/proxy/api/v1"
+        app_id = "d0go2puunshmtco3guo0"
+        
+        # 如果没有提供系统提示词，使用默认提示词
+        if not system_prompt:
+            system_prompt = "你是南开大学津南校区的专业导航助手。你的任务是提供校园内各地点的准确信息，并严格按照要求的JSON格式返回。"
+        
+        # 构建提示词
         structured_prompt = (
             f"你是南开大学津南校区的导航助手。请分析用户的问题：\"{prompt}\"，并提取相关的地点信息。\n\n"
             f"请严格按照以下 JSON 格式返回信息，不要添加任何额外的文本、解释或代码块标记：\n"
@@ -232,101 +224,79 @@ def call_deepseek_api(prompt, system_prompt=""):
             '  "description": "详细描述该地点的位置、功能和重要信息",\n'
             '  "features": ["该地点的特点1", "特点2", "特点3"]\n'
             "}\n\n"
-            f"重要提示：\n"
-            f"1. 只返回JSON对象本身，不要包含任何其他文本\n"
-            f"2. 如果问题与南开大学津南校区的地点无关，请返回：\n"
+            f"如果问题与南开大学津南校区的地点无关，请返回：\n"
             "{\n"
             '  "name": "无法处理的请求",\n'
             '  "description": "您的问题与南开大学津南校区的地点无关，请询问校园内的具体地点。",\n'
             '  "features": []\n'
             "}\n"
         )
-
+        
+        # 构建请求头和请求体
         headers = {
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-
+        
         payload = {
-            "model": "deepseek-chat",
+            "app_id": app_id,
             "messages": [
-                {"role": "system", "content": "你是南开大学津南校区的专业导航助手。你的任务是提供校园内各地点的准确信息，并严格按照要求的JSON格式返回。"},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": structured_prompt}
-            ],
-            "temperature": 0.3, # 降低温度以获得更确定性的输出
-            "max_tokens": 1000
+            ]
         }
-
-        print(f"发送请求到DeepSeek API，提示词：{prompt}")
-        response = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers=headers,
-            json=payload
-        )
-
-        # --- 处理 DeepSeek 响应 ---
+        
+        # 发送请求
+        print(f"发送请求到NKUGenious API，提示词：{prompt}")
+        response = requests.post(api_endpoint, headers=headers, json=payload)
+        
+        # 简化的响应处理
         if response.status_code == 200:
             response_json = response.json()
-            raw_output = response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
-            print(f"DeepSeek原始响应: {raw_output}")
-
-            # --- 尝试用 Pydantic 解析 ---
+            # 根据实际 API 响应格式调整
+            raw_output = response_json.get("response", "")
+            
+            # 尝试解析 JSON
             try:
-                # 清理可能的前缀和后缀文本
-                cleaned_output = raw_output.strip()
-                # 如果输出被Markdown代码块包围，去除它们
-                if cleaned_output.startswith("```json") and cleaned_output.endswith("```"):
-                    cleaned_output = cleaned_output[7:-3].strip()
-                elif cleaned_output.startswith("```") and cleaned_output.endswith("```"):
-                    cleaned_output = cleaned_output[3:-3].strip()
+                # 提取 JSON 部分
+                json_start = raw_output.find('{')
+                json_end = raw_output.rfind('}')
                 
-                # 尝试直接解析清理后的输出
-                parsed_data = LocationInfo.parse_raw(cleaned_output)
-                print("成功解析DeepSeek输出为Pydantic模型")
-            except (ValidationError, json.JSONDecodeError) as e:
-                print(f"直接解析失败: {e}")
-                # 尝试从输出中提取JSON部分
-                try:
-                    json_start = raw_output.find('{')
-                    json_end = raw_output.rfind('}')
-                    if json_start != -1 and json_end != -1:
-                        json_str = raw_output[json_start:json_end+1]
-                        print(f"提取的JSON字符串: {json_str}")
-                        parsed_data = LocationInfo.parse_raw(json_str)
-                        print("从原始输出中提取并成功解析JSON")
-                    else:
-                        print("在原始输出中未找到有效的JSON结构")
-                except Exception as inner_e:
-                    print(f"尝试提取JSON后解析仍然失败: {inner_e}")
-                    # 如果所有解析尝试都失败，创建一个默认的结构化输出
+                if json_start != -1 and json_end != -1:
+                    json_str = raw_output[json_start:json_end+1]
+                    parsed_data = LocationInfo.parse_raw(json_str)
+                else:
+                    # 创建默认响应
                     parsed_data = LocationInfo(
                         name="解析失败",
-                        description=f"无法从AI响应中提取结构化数据。原始响应: {raw_output[:100]}...",
-                        features=["请尝试重新提问，使用更明确的地点描述"]
+                        description="无法从响应中提取结构化数据",
+                        features=["请尝试重新提问"]
                     )
-
+            except Exception:
+                # 简化的错误处理
+                parsed_data = LocationInfo(
+                    name="解析失败",
+                    description="无法解析响应数据",
+                    features=["请尝试重新提问"]
+                )
         else:
-            error_msg = f"DeepSeek API调用失败: {response.status_code}, {response.text}"
-            print(error_msg)
-            raw_output = f"AI服务暂时不可用，请稍后再试 (错误码: {response.status_code})"
-            # 创建一个错误的结构化输出
+            # API 调用失败
+            raw_output = "API 调用失败"
             parsed_data = LocationInfo(
                 name="API调用失败",
-                description=f"无法连接到DeepSeek API。错误码: {response.status_code}",
-                features=["请检查网络连接", "确认API密钥是否有效", "稍后再试"]
+                description=f"状态码: {response.status_code}",
+                features=["请稍后再试"]
             )
-
+            
     except Exception as e:
-        error_msg = f"调用DeepSeek API或解析时出错: {str(e)}"
-        print(error_msg)
-        raw_output = "处理请求时发生错误，请稍后再试"
-        # 创建一个异常的结构化输出
+        # 捕获所有异常，简化处理
+        print(f"API 调用异常: {str(e)}")
+        raw_output = "处理请求时发生错误"
         parsed_data = LocationInfo(
             name="处理异常",
-            description=f"处理请求时发生异常: {str(e)}",
+            description="请求处理失败",
             features=["请稍后再试"]
         )
-
+        
     return raw_output, parsed_data
 
 # 添加一个路由处理导航请求
@@ -436,55 +406,85 @@ def handle_info():
             return jsonify(response_data)
 
         # 调用AI解析（使用专用提示词）
-        ai_raw_output, ai_structured_output = call_deepseek_api(
+        ai_raw_output, ai_structured_output = call_nkugenious_api(
             user_input,
             system_prompt="请精确提取要查询详情的地点名称，只需返回{'name':'标准名称'}格式"
         )
         response_data["output"] = ai_raw_output
 
         # 错误处理
-        if not ai_structured_output or ai_structured_output.name in ["无法处理的请求", "解析失败"]:
+        if not ai_structured_output or ai_structured_output.name in ["无法处理的请求", "解析失败", "API调用失败", "处理异常"]:
             response_data.update({
                 "message": "无法识别要查询的地点",
                 "detail_info": {
                     "name": "未知地点",
-                    "suggestion": "请尝试使用更标准的地点名称如'图书馆'或'第一食堂'"
+                    "description": "无法识别您查询的地点",
+                    "location": "未知",
+                    "features": ["请尝试使用更标准的地点名称如'图书馆'或'食堂'"]
                 }
             })
             return jsonify(response_data)
 
-        # 获取详细信息
-        location_name = ai_structured_output.name
-        detail_info = location_detail_db.get(location_name, {
-            "name": location_name,
-            "description": "暂无详细信息",
-            "location": "位置信息待补充",
-            "features": ["信息更新中"],
-            "tips": ["请咨询校园工作人员获取最新信息"]
-        })
-
-        # 关联地点匹配
+        # 获取详细信息 - 严格匹配
+        location_name = ai_structured_output.name.lower()
+        matched_key = None
+        
+        # 从前端获取区域数据
         areas_data = load_areas_data()
-        related_locations = [
-            area['internal_id'] for area in areas_data
-            if 'internal_id' in area and
-               area.get('name', '').lower() in location_name.lower()
-        ]
+        
+        # 严格匹配区域中的地点
+        for area in areas_data:
+            area_name = area.get('name', '').lower()
+            if area_name in location_name:
+                matched_key = area_name
+                break
+        
+        # 获取详情数据库
+        location_detail_db = load_location_details()
+        detail_info = location_detail_db.get(matched_key) if matched_key else None
+        
+        # 如果在详情数据库中找不到该地点，直接返回未找到
+        if not detail_info:
+            response_data.update({
+                "message": f"未找到{ai_structured_output.name}的详细信息",
+                "detail_info": {
+                    "name": ai_structured_output.name,
+                    "description": "暂无该地点的详细信息",
+                    "location": "位置信息待补充",
+                    "features": ["信息更新中"]
+                }
+            })
+            return jsonify(response_data)
+
+        # 关联地点匹配 - 严格匹配
+        related_locations = []
+        
+        for area in areas_data:
+            if 'internal_id' in area and area.get('name', '').lower() == matched_key:
+                related_locations.append(area['internal_id'])
+                print(f"精确匹配到区域: {area.get('name')}")
 
         # 数据验证
-        validated_info = LocationDetailInfo(**detail_info)
-        response_data.update({
-            "status": "success",
-            "detail_info": validated_info.dict(),
-            "related_locations": related_locations,
-            "message": "详细信息获取成功"
-        })
+        try:
+            validated_info = LocationDetailInfo(**detail_info)
+            response_data.update({
+                "status": "success",
+                "detail_info": validated_info.dict(),
+                "related_locations": related_locations,
+                "message": "详细信息获取成功"
+            })
+        except ValidationError as e:
+            # 处理验证错误
+            print(f"数据验证错误: {str(e)}")
+            response_data.update({
+                "message": "数据验证失败",
+                "error": str(e)
+            })
 
     except ValidationError as e:
         response_data.update({
             "message": "数据验证失败",
-            "error": str(e),
-            "detail_info": detail_info  # 保持返回原始数据
+            "error": str(e)
         })
     except Exception as e:
         response_data.update({
